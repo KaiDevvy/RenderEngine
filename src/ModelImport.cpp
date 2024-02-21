@@ -3,9 +3,18 @@
 #include <sstream>
 #include <glm/vec2.hpp>
 
-void ModelImport::loadFromFile(Mesh& mesh, std::string const& path)
+std::unordered_map<std::string, unsigned int> ModelImport::cacheIndices{};
+std::vector<MeshData*> ModelImport::cache{};
+
+MeshData* ModelImport::loadFromFile(std::string const& path)
 {
 	const std::string ASSET_PATH = "./Resources/Models/";
+
+	// Test cache first
+	if (cacheIndices.count(path))
+		return cache[cacheIndices[path]];
+
+	MeshData* mesh = new MeshData();
 
 	std::vector< unsigned int > vertexIndices, normalIndices, colorIndices;
 	std::vector< glm::vec3 > temp_vertices;
@@ -54,28 +63,17 @@ void ModelImport::loadFromFile(Mesh& mesh, std::string const& path)
 		else if (token == "f") // Faces
 		{
 			std::string group;
-			while (std::getline(iss, group, ' '))
+			while(std::getline(iss, group, ' '))
 			{
-				std::istringstream groupStream(group);
-				std::string indexValue;
-				while (std::getline(groupStream, indexValue, '/'))
-				{
-					if (indexValue.empty())
-						continue;
+				size_t index = group.find("//");
+				if (index == std::string::npos)
+					continue;
 
-					unsigned int index;
-					std::stringstream(indexValue) >> index;
+				std::string leftNum = group.substr(0,index);
+				std::string rightNum = group.substr(index+2);
+				vertexIndices.push_back(std::stoul(leftNum));
+				normalIndices.push_back(std::stoul(rightNum));
 
-					if (vertexIndices.size() == normalIndices.size())
-					{
-						vertexIndices.push_back(index);
-					}
-					else
-					{
-						normalIndices.push_back(index);
-					}
-					
-				}
 			}
 		}
 	}
@@ -83,12 +81,17 @@ void ModelImport::loadFromFile(Mesh& mesh, std::string const& path)
 	for (unsigned int vertexIndex : vertexIndices)
 	{
 		glm::vec3 vertex = temp_vertices[vertexIndex-1];
-		mesh.vertices.push_back(vertex);
+		mesh->vertices.push_back(vertex);
 	}
 
 	for (unsigned int normalIndex : normalIndices)
 	{
 		glm::vec3 normal = temp_normals[normalIndex-1];
-		mesh.normals.push_back(normal);
+		mesh->normals.push_back(normal);
 	}
+
+	cacheIndices[path] = cache.size();
+	cache.push_back(mesh);
+
+	return mesh;
 }

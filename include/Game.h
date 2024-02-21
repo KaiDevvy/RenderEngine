@@ -41,8 +41,7 @@ private:
 
 	RenderEngine renderEngine{};
 
-	Mesh cafe{"Cafe.obj", true};
-	Mesh monkey{"Monkey.obj", false};
+	Mesh cafe{"Shop.obj", true};
 
 };
 
